@@ -8,6 +8,8 @@ description: A valid spec with a recent verification date
 
 Last verified: 2026-08-01
 
+## Spec
+
 ### Requirement: Fresh Requirement
 The system must demonstrate freshness.
 

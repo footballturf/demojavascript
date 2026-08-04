@@ -8,6 +8,8 @@ description: A valid spec referencing a non-existent commit
 
 Last verified: 2023-06-01
 
+## Spec
+
 ### Requirement: Orphaned Requirement
 The system must detect orphaned specs.
 

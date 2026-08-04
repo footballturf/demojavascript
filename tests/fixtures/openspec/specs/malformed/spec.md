@@ -7,6 +7,8 @@ description: A spec with invalid metadata and missing scenarios
 <!-- status: draft -->
 <!-- invalid-key!!!: bad value -->
 
+## Spec
+
 ### Requirement: Missing Scenario Requirement
 This requirement has no Scenario child block.
 

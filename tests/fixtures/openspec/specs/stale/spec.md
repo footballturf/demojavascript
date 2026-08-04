@@ -8,6 +8,8 @@ description: A valid spec with an old verification date
 
 Last verified: 2020-01-15
 
+## Spec
+
 ### Requirement: Stale Requirement
 The system must detect stale specs.
 

@@ -6,6 +6,8 @@ description: A valid spec without a Last verified date
 <!-- id: unverified-spec -->
 <!-- status: draft -->
 
+## Spec
+
 ### Requirement: Unverified Requirement
 The system should handle specs without verification dates.
 
