@@ -42,6 +42,9 @@ function runChecker(projectRoot, envOverrides = {}) {
 
 let tempRepo;
 let sourceFilePath;
+let _initialCommitHash;
+let _laterCommitHash;
+let _oldDate;
 
 describe('check-spec-freshness', () => {
   // Create a shared git repo for tests
@@ -65,7 +68,7 @@ describe('check-spec-freshness', () => {
       env: { ...process.env, GIT_COMMITTER_DATE: '2024-01-01T00:00:00' },
       stdio: 'ignore',
     });
-    initialCommitHash = execSync('git rev-parse HEAD', {
+    _initialCommitHash = execSync('git rev-parse HEAD', {
       cwd: tempRepo, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'],
     }).trim();
 
@@ -77,11 +80,11 @@ describe('check-spec-freshness', () => {
       env: { ...process.env, GIT_COMMITTER_DATE: '2025-06-15T00:00:00' },
       stdio: 'ignore',
     });
-    laterCommitHash = execSync('git rev-parse HEAD', {
+    _laterCommitHash = execSync('git rev-parse HEAD', {
       cwd: tempRepo, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'],
     }).trim();
 
-    oldDate = '2024-03-01';
+    _oldDate = '2024-03-01';
 
     // Create openspec directory structure
     fs.mkdirSync(path.join(tempRepo, 'openspec', 'specs', 'fresh'), { recursive: true });
