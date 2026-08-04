@@ -42,9 +42,6 @@ function runChecker(projectRoot, envOverrides = {}) {
 
 let tempRepo;
 let sourceFilePath;
-let initialCommitHash;
-let laterCommitHash;
-let oldDate;
 
 describe('check-spec-freshness', () => {
   // Create a shared git repo for tests

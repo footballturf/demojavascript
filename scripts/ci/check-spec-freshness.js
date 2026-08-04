@@ -102,8 +102,6 @@ function isGitRepo() {
  * Returns { status, enforcedFile, lastVerified, latestCommit? }
  */
 function checkFileFreshness(enforcedFile, lastVerifiedDate) {
-  const fullPath = path.join(projectRoot, enforcedFile);
-
   if (!isGitAvailable() || !isGitRepo()) {
     return { status: 'UNVERIFIED', reason: 'git unavailable or not a repo' };
   }

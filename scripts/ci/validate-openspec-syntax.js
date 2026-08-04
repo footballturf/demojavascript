@@ -61,11 +61,8 @@ const openspecDir = path.join(openspecRoot, 'openspec');
 // ── Regex patterns ──────────────────────────────────────────────
 
 const YAML_FRONTMATTER_RE = /^---\s*\n([\s\S]*?)\n---/;
-const REQUIREMENT_RE = /^###\s+Requirement:\s*(.+)$/m;
 const SCENARIO_RE = /^####\s+Scenario:\s*(.+)$/m;
-const INVARIANT_RE = /^###\s+Invariant:\s*(.+)$/m;
 const ENFORCED_RE = /<!--\s*enforced:\s*(.+?)\s*-->/;
-const METADATA_RE = /<!--\s*([a-z_-]+):\s*(.*?)\s*-->/g;
 const ANY_COMMENT_WITH_COLON_RE = /<!--\s*(\S+?):\s*(.*?)\s*-->/g;
 const METADATA_KEY_RE = /^[a-z_-]+$/;
 const ENFORCED_ANCHOR_RE = /^([^\s:]+)::([^\s]+)$/; // path/to/file.ext::symbolName
@@ -82,10 +79,6 @@ function isDeltaFile(content) {
   return DELTA_BLOCKS.ADDED.test(content) ||
          DELTA_BLOCKS.MODIFIED.test(content) ||
          DELTA_BLOCKS.REMOVED.test(content);
-}
-
-function hasAnyDeltaBlock(content) {
-  return isDeltaFile(content);
 }
 
 function collectMetadata(content) {
@@ -170,7 +163,6 @@ function validateSpecFile(filePath) {
   if (isDelta) {
     // Delta files must have at least one ADDED, MODIFIED, or REMOVED block with content
     let hasContent = false;
-    const sections = content.split(/<!--\s*(?:ADDED|MODIFIED|REMOVED):\s*-->/);
     // Check sections after each marker for non-empty content
     const markers = [];
     for (const [name, re] of Object.entries(DELTA_BLOCKS)) {
