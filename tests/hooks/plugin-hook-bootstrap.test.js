@@ -143,6 +143,41 @@ process.stdout.write(JSON.stringify({
     }
   })) passed++; else failed++;
 
+  if (test('node mode keeps CLAUDE_PLUGIN_ROOT ahead of leftover GROK_PLUGIN_ROOT', () => {
+    const claudeRoot = createTempDir();
+    const grokRoot = createTempDir();
+    try {
+      writeFile(claudeRoot, path.join('scripts', 'hook.js'), `
+const fs = require('fs');
+process.stdout.write(JSON.stringify({
+  grok: process.env.GROK_PLUGIN_ROOT,
+  claude: process.env.CLAUDE_PLUGIN_ROOT,
+}));
+`);
+      writeFile(grokRoot, path.join('scripts', 'hook.js'), `
+process.stdout.write(JSON.stringify({ wrong: true }));
+`);
+
+      const result = run(['node', path.join('scripts', 'hook.js')], {
+        input: 'payload',
+        env: {
+          CLAUDE_PLUGIN_ROOT: claudeRoot,
+          GROK_PLUGIN_ROOT: grokRoot,
+          ECC_PLUGIN_ROOT: '',
+          PLUGIN_ROOT: '',
+        },
+      });
+      const parsed = JSON.parse(result.stdout);
+
+      assert.strictEqual(result.status, 0, result.stderr);
+      assert.strictEqual(parsed.claude, claudeRoot);
+      assert.strictEqual(parsed.grok, claudeRoot);
+    } finally {
+      cleanup(claudeRoot);
+      cleanup(grokRoot);
+    }
+  })) passed++; else failed++;
+
   if (test('node mode resolves GROK_PLUGIN_ROOT when Claude plugin root is unset', () => {
     const root = createTempDir();
     try {

@@ -28,7 +28,12 @@ const PLUGIN_ROOT_SEGMENTS = [
 // If that skill is ever renamed, move this sentinel with it.
 const DEFAULT_SCRIPT_PROBE = path.join('scripts', 'lib', 'utils.js');
 const DEFAULT_SKILL_PROBE = path.join('skills', 'continuous-learning-v2');
-const PLUGIN_ROOT_ENV_KEYS = ['GROK_PLUGIN_ROOT', 'CLAUDE_PLUGIN_ROOT', 'ECC_PLUGIN_ROOT'];
+const PLUGIN_ROOT_ENV_KEYS = [
+  'PLUGIN_ROOT',
+  'CLAUDE_PLUGIN_ROOT',
+  'GROK_PLUGIN_ROOT',
+  'ECC_PLUGIN_ROOT',
+];
 
 function pluginRootFromEnv(env = process.env) {
   for (const key of PLUGIN_ROOT_ENV_KEYS) {
@@ -102,7 +107,9 @@ function findRootInVendorHome(vendorDir, isRoot) {
  * Resolve the ECC source root directory.
  *
  * Tries, in order:
- *   1. GROK_PLUGIN_ROOT, CLAUDE_PLUGIN_ROOT, or ECC_PLUGIN_ROOT
+ *   1. PLUGIN_ROOT, CLAUDE_PLUGIN_ROOT, GROK_PLUGIN_ROOT, or ECC_PLUGIN_ROOT
+ *      (Codex PLUGIN_ROOT and Claude's active plugin root beat a leftover
+ *      GROK_PLUGIN_ROOT so mixed-harness shells do not bootstrap the wrong copy)
  *   2. Standard install location (~/.claude/) — when a complete root exists there
  *   3. Known plugin roots under ~/.claude/plugins/ (current + legacy slugs)
  *   4. Plugin cache auto-detection — scans ~/.claude/plugins/cache/{ecc,everything-claude-code}/
@@ -160,8 +167,9 @@ function resolveEccRoot(options = {}) {
  *
  * This minified form contains no spread, no nested array literals, and no
  * escaped double quotes, so it survives `node -e "..."` quoting on every shell.
- * When GROK_PLUGIN_ROOT, CLAUDE_PLUGIN_ROOT, or ECC_PLUGIN_ROOT is set it is
- * used directly. Grok trusted plugin hooks set both GROK_PLUGIN_ROOT and the
+ * When PLUGIN_ROOT, CLAUDE_PLUGIN_ROOT, GROK_PLUGIN_ROOT, or ECC_PLUGIN_ROOT is
+ * set it is used directly, in that order. Codex maps PLUGIN_ROOT onto
+ * CLAUDE_PLUGIN_ROOT; Grok trusted plugin hooks set GROK_PLUGIN_ROOT and the
  * CLAUDE_PLUGIN_ROOT alias. Otherwise the inline probes ~/.claude plugin
  * locations only far enough to load this module, then delegates to
  * resolveEccRoot() (which also searches ~/.grok).
@@ -170,7 +178,7 @@ function resolveEccRoot(options = {}) {
  *   const _r = <paste INLINE_RESOLVE>;
  *   const sm = require(_r + '/scripts/lib/session-manager');
  */
-const INLINE_RESOLVE = `(function(){var p=require('path'),f=require('fs'),o=require('os');var e=process.env.GROK_PLUGIN_ROOT||process.env.CLAUDE_PLUGIN_ROOT||process.env.ECC_PLUGIN_ROOT;if(e&&e.trim())return e.trim();var d=p.join(o.homedir(),'.claude');function L(x){try{return require(p.join(x,'scripts','lib','resolve-ecc-root')).resolveEccRoot()}catch(_){return null}}var r=L(d);if(r)return r;var s=['ecc','ecc@ecc','marketplaces/ecc','everything-claude-code','everything-claude-code@everything-claude-code','marketplaces/everything-claude-code'];for(var i=0;i<s.length;i++){r=L(p.join(d,'plugins',s[i]));if(r)return r}try{var g=['ecc','everything-claude-code'];for(var j=0;j<g.length;j++){var c=p.join(d,'plugins','cache',g[j]);var O=f.readdirSync(c);for(var k=0;k<O.length;k++){var q=p.join(c,O[k]);var V=f.readdirSync(q);for(var m=0;m<V.length;m++){r=L(p.join(q,V[m]));if(r)return r}}}}catch(_){}return d})()`;
+const INLINE_RESOLVE = `(function(){var p=require('path'),f=require('fs'),o=require('os');var e=process.env.PLUGIN_ROOT||process.env.CLAUDE_PLUGIN_ROOT||process.env.GROK_PLUGIN_ROOT||process.env.ECC_PLUGIN_ROOT;if(e&&e.trim())return e.trim();var d=p.join(o.homedir(),'.claude');function L(x){try{return require(p.join(x,'scripts','lib','resolve-ecc-root')).resolveEccRoot()}catch(_){return null}}var r=L(d);if(r)return r;var s=['ecc','ecc@ecc','marketplaces/ecc','everything-claude-code','everything-claude-code@everything-claude-code','marketplaces/everything-claude-code'];for(var i=0;i<s.length;i++){r=L(p.join(d,'plugins',s[i]));if(r)return r}try{var g=['ecc','everything-claude-code'];for(var j=0;j<g.length;j++){var c=p.join(d,'plugins','cache',g[j]);var O=f.readdirSync(c);for(var k=0;k<O.length;k++){var q=p.join(c,O[k]);var V=f.readdirSync(q);for(var m=0;m<V.length;m++){r=L(p.join(q,V[m]));if(r)return r}}}}catch(_){}return d})()`;
 
 module.exports = {
   resolveEccRoot,

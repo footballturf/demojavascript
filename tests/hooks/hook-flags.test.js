@@ -99,6 +99,38 @@ function runTests() {
     });
   })) passed++; else failed++;
 
+  if (test('CLAUDE_PLUGIN_ROOT beats leftover GROK_PLUGIN_ROOT for managed hook config', () => {
+    const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-hook-flags-claude-'));
+    const grokRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-hook-flags-grok-win-'));
+    try {
+      fs.mkdirSync(path.join(claudeRoot, 'ecc'), { recursive: true });
+      fs.mkdirSync(path.join(grokRoot, 'ecc'), { recursive: true });
+      fs.writeFileSync(path.join(claudeRoot, 'ecc', 'setup.json'), JSON.stringify({
+        hooks: { enabled: true, profile: 'strict' },
+      }));
+      fs.writeFileSync(path.join(grokRoot, 'ecc', 'setup.json'), JSON.stringify({
+        hooks: { enabled: false, profile: 'minimal' },
+      }));
+      withEnv({
+        ECC_HOOKS_ENABLED: undefined,
+        ECC_HOOK_PROFILE: undefined,
+        CLAUDE_PLUGIN_OPTION_HOOKS_ENABLED: undefined,
+        CLAUDE_PLUGIN_OPTION_HOOK_PROFILE: undefined,
+        ECC_HOOK_CONFIG: undefined,
+        PLUGIN_ROOT: undefined,
+        CLAUDE_PLUGIN_ROOT: claudeRoot,
+        GROK_PLUGIN_ROOT: grokRoot,
+        ECC_PLUGIN_ROOT: undefined,
+      }, () => {
+        assert.strictEqual(getHookProfile(), 'strict');
+        assert.strictEqual(areHooksEnabled(), true);
+      });
+    } finally {
+      fs.rmSync(claudeRoot, { recursive: true, force: true });
+      fs.rmSync(grokRoot, { recursive: true, force: true });
+    }
+  })) passed++; else failed++;
+
   if (test('GROK_PLUGIN_ROOT locates managed hook config when Claude root is unset', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-hook-flags-grok-'));
     const configPath = path.join(root, 'ecc', 'setup.json');

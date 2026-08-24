@@ -12,11 +12,14 @@ function getPluginRoot(options = {}) {
   if (options.pluginRoot && String(options.pluginRoot).trim()) {
     return String(options.pluginRoot).trim();
   }
-  if (process.env.GROK_PLUGIN_ROOT && process.env.GROK_PLUGIN_ROOT.trim()) {
-    return process.env.GROK_PLUGIN_ROOT.trim();
+  if (process.env.PLUGIN_ROOT && process.env.PLUGIN_ROOT.trim()) {
+    return process.env.PLUGIN_ROOT.trim();
   }
   if (process.env.CLAUDE_PLUGIN_ROOT && process.env.CLAUDE_PLUGIN_ROOT.trim()) {
     return process.env.CLAUDE_PLUGIN_ROOT.trim();
+  }
+  if (process.env.GROK_PLUGIN_ROOT && process.env.GROK_PLUGIN_ROOT.trim()) {
+    return process.env.GROK_PLUGIN_ROOT.trim();
   }
   if (process.env.ECC_PLUGIN_ROOT && process.env.ECC_PLUGIN_ROOT.trim()) {
     return process.env.ECC_PLUGIN_ROOT.trim();

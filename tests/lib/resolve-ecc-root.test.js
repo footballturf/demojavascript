@@ -526,21 +526,30 @@ module.exports = { resolveEccRoot() { assert.strictEqual(process.env.HOME, ${JSO
     }
   })) passed++; else failed++;
 
-  if (test('pluginRootFromEnv prefers GROK_PLUGIN_ROOT then CLAUDE then ECC', () => {
+  if (test('pluginRootFromEnv prefers PLUGIN_ROOT then CLAUDE then GROK then ECC', () => {
+    assert.strictEqual(
+      pluginRootFromEnv({
+        PLUGIN_ROOT: '/codex/root',
+        GROK_PLUGIN_ROOT: '/grok/root',
+        CLAUDE_PLUGIN_ROOT: '/claude/root',
+        ECC_PLUGIN_ROOT: '/ecc/root',
+      }),
+      '/codex/root'
+    );
     assert.strictEqual(
       pluginRootFromEnv({
         GROK_PLUGIN_ROOT: '/grok/root',
         CLAUDE_PLUGIN_ROOT: '/claude/root',
         ECC_PLUGIN_ROOT: '/ecc/root',
       }),
-      '/grok/root'
+      '/claude/root'
     );
     assert.strictEqual(
       pluginRootFromEnv({
-        CLAUDE_PLUGIN_ROOT: '/claude/root',
+        GROK_PLUGIN_ROOT: '/grok/root',
         ECC_PLUGIN_ROOT: '/ecc/root',
       }),
-      '/claude/root'
+      '/grok/root'
     );
     assert.strictEqual(pluginRootFromEnv({ ECC_PLUGIN_ROOT: '/ecc/root' }), '/ecc/root');
     assert.strictEqual(pluginRootFromEnv({ GROK_PLUGIN_ROOT: '  /trimmed/grok  ' }), '/trimmed/grok');
@@ -623,6 +632,24 @@ module.exports = { resolveEccRoot() { assert.strictEqual(process.env.HOME, ${JSO
     } finally {
       fs.rmSync(homeDir, { recursive: true, force: true });
     }
+  })) passed++; else failed++;
+
+  if (test('INLINE_RESOLVE keeps Codex PLUGIN_ROOT and CLAUDE_PLUGIN_ROOT ahead of leftover GROK_PLUGIN_ROOT', () => {
+    const { execFileSync } = require('child_process');
+    const env = {
+      ...process.env,
+      PLUGIN_ROOT: '/inline/codex/root',
+      CLAUDE_PLUGIN_ROOT: '/inline/claude/root',
+      GROK_PLUGIN_ROOT: '/inline/grok/root',
+    };
+    delete env.ECC_PLUGIN_ROOT;
+    const result = execFileSync('node', [
+      '-e', `console.log(${INLINE_RESOLVE})`,
+    ], {
+      env,
+      encoding: 'utf8',
+    }).trim();
+    assert.strictEqual(result, '/inline/codex/root');
   })) passed++; else failed++;
 
   if (test('INLINE_RESOLVE returns GROK_PLUGIN_ROOT when set', () => {

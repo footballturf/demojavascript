@@ -15,6 +15,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { pluginRootFromEnv } = require('./resolve-ecc-root');
 
 const VALID_PROFILES = new Set(['minimal', 'standard', 'strict']);
 
@@ -40,9 +41,7 @@ function sanitizeDiagnostic(value) {
 }
 
 function readManagedHookConfig(env = process.env) {
-  const pluginRoot = String(
-    env.GROK_PLUGIN_ROOT || env.CLAUDE_PLUGIN_ROOT || env.ECC_PLUGIN_ROOT || ''
-  ).trim();
+  const pluginRoot = pluginRootFromEnv(env);
   const configPath = String(env.ECC_HOOK_CONFIG || '').trim()
     || (pluginRoot ? path.join(pluginRoot, 'ecc', 'setup.json') : '');
   if (!configPath || !fs.existsSync(configPath)) return {};

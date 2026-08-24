@@ -222,7 +222,7 @@ function main() {
   const [, , mode, relPath, ...args] = process.argv;
   const raw = readStdinRaw();
   const rootDir = normalizePluginRootForPlatform(
-    process.env.GROK_PLUGIN_ROOT || process.env.CLAUDE_PLUGIN_ROOT || process.env.ECC_PLUGIN_ROOT
+    process.env.PLUGIN_ROOT || process.env.CLAUDE_PLUGIN_ROOT || process.env.GROK_PLUGIN_ROOT || process.env.ECC_PLUGIN_ROOT
   );
 
   if (!mode || !relPath || !rootDir) {
