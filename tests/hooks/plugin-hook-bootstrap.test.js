@@ -143,6 +143,38 @@ process.stdout.write(JSON.stringify({
     }
   })) passed++; else failed++;
 
+  if (test('node mode resolves GROK_PLUGIN_ROOT when Claude plugin root is unset', () => {
+    const root = createTempDir();
+    try {
+      writeFile(root, path.join('scripts', 'hook.js'), `
+const fs = require('fs');
+const raw = fs.readFileSync(0, 'utf8');
+process.stdout.write(JSON.stringify({
+  raw,
+  grokRoot: process.env.GROK_PLUGIN_ROOT,
+  claudeRoot: process.env.CLAUDE_PLUGIN_ROOT,
+}));
+`);
+
+      const result = run(['node', path.join('scripts', 'hook.js')], {
+        input: 'payload',
+        env: {
+          GROK_PLUGIN_ROOT: root,
+          CLAUDE_PLUGIN_ROOT: '',
+          ECC_PLUGIN_ROOT: '',
+        },
+      });
+      const parsed = JSON.parse(result.stdout);
+
+      assert.strictEqual(result.status, 0, result.stderr);
+      assert.strictEqual(parsed.raw, 'payload');
+      assert.strictEqual(parsed.grokRoot, root);
+      assert.strictEqual(parsed.claudeRoot, root);
+    } finally {
+      cleanup(root);
+    }
+  })) passed++; else failed++;
+
   if (test('node mode passes original stdin when child exits cleanly without stdout', () => {
     const root = createTempDir();
     try {

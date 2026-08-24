@@ -179,9 +179,11 @@ You can use ECC with Claude Code, Codex, and other harnesses at the same time. C
 - **Recommended today for Claude Code:** use the [native plugin commands above](#install-with-claude-code)
 - **Coming in release 2.2:** guided package setup for Claude Code, Codex, and Kimi Code; see the preview at the bottom of this install area
 - **Works:** Claude Code plugin + Codex native plugin
+- **Works:** Claude Code plugin + Grok Build plugin
 - **Works:** Claude Code plugin + the legacy Codex sync flow
 - **Avoid:** Claude Code plugin + full Claude manual install
 - **Avoid:** Codex sync + Codex marketplace plugin
+- **Avoid:** stacking `grok plugin install` with a second Grok copy of the same catalog
 
 **Do not stack install methods.** Installing ECC twice into the same harness can duplicate skills, commands, hooks, or configuration; installing it once into multiple harnesses does not.
 
@@ -281,6 +283,27 @@ Pre-manifest installations are handled conservatively: ECC removes its marked `A
 You can also open the ECC repository directly in Codex for a project-local setup. Codex reads the root `AGENTS.md` and the trusted project configuration in `.codex/` without a global sync. Do not add the native marketplace plugin on top of the sync flow.
 
 For repo navigation, surface ownership, and PR diff packet guidance, read the [Codex ECC Navigation Map](docs/CODEX-NAVIGATION-GUIDE.md). See the [.codex plugin notes](.codex-plugin/README.md) for native lifecycle details.
+
+### Grok Build
+
+Grok Build installs ECC as a native plugin. Use the Grok marketplace catalog in `.grok-plugin/` (Claude's `"source": "./"` is rejected by Grok). Plugins stay off until enabled, and hooks plus MCP stay inactive until trusted:
+
+```bash
+grok plugin marketplace add affaan-m/ECC
+grok plugin install ecc --trust
+grok plugin enable ecc
+grok plugin validate .
+grok inspect
+```
+
+Local checkout, including unpublished changes:
+
+```bash
+grok plugin install /absolute/path/to/ECC --trust
+grok plugin enable ecc
+```
+
+Grok does not honor Claude `userConfig`. Hook profile is `ECC_HOOK_PROFILE=minimal|standard|strict`. A trusted install attaches root `.mcp.json` (`chrome-devtools` by default); Claude plugin installs opt that file out. Agent files load, but ECC `tools:` allowlists use Claude names and are not mapped in Grok agent frontmatter. See [.grok-plugin/README.md](.grok-plugin/README.md).
 
 ### Other agents and editors
 
@@ -1025,6 +1048,7 @@ ECC/
 |-- hooks/            # runtime automation and enforcement
 |-- scripts/          # install, repair, sync, orchestration, and checks
 |-- .claude-plugin/   # Claude Code marketplace manifest
+|-- .grok-plugin/     # Grok Build plugin and marketplace manifests
 |-- .codex/           # Codex reference configuration and agent roles
 |-- .opencode/        # OpenCode plugin, commands, and instructions
 |-- .cursor/          # Cursor rules and hook adapter
@@ -1041,6 +1065,10 @@ ECC/
 |-- .claude-plugin/   # Plugin and marketplace manifests
 |   |-- plugin.json         # Plugin metadata and component paths
 |   |-- marketplace.json    # Marketplace catalog for /plugin marketplace add
+|
+|-- .grok-plugin/     # Grok Build plugin and marketplace manifests
+|   |-- plugin.json         # Grok metadata (no Claude userConfig / mcpServers opt-out)
+|   |-- marketplace.json    # Catalog with a Git URL source; Grok rejects source "./"
 |
 |-- agents/           # 67 specialized subagents for delegation
 |   |-- planner.md           # Feature implementation planning
@@ -1530,6 +1558,7 @@ See [affaan-m/ECC#2065](https://github.com/affaan-m/ECC/issues/2065).
 | Harness | Status | Recommended distribution | Important limitation |
 |---|---|---|---|
 | Claude Code | Stable primary | Plugin or selective installer | The plugin advertises the installed catalog to the model; use a selective/manual profile when context footprint matters. Optional shell-backed skills are not portable to every OS. |
+| Grok Build | Supported plugin | `grok plugin install ecc --trust` then `grok plugin enable ecc` | Hooks and MCP require `--trust`. Grok ignores Claude `userConfig` (use `ECC_HOOK_PROFILE`). Trusted installs attach root `.mcp.json`. Agent tool allowlists stay Claude-named. The full skill catalog is large. |
 | Codex | Supported sync; marketplace experimental | Repo config or `sync-ecc-to-codex.sh` | No ECC hook runtime. The marketplace package can omit shared repository content from Codex's cache; use sync for the reliable path. |
 | Cursor | Beta project adapter | Selective installer into `.cursor/` | Agent discovery varies by Cursor build, and ECC's installer paths do not yet expose identical hook sets ([#2419](https://github.com/affaan-m/ECC/issues/2419)). |
 | OpenCode | Beta built plugin | Build plugin, then selective installer | ECC ships a subset of the catalog and the reference config pins Anthropic models; select models available to your provider ([#2617](https://github.com/affaan-m/ECC/issues/2617)). |
