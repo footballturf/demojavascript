@@ -55,3 +55,9 @@ jobs:
 
       - name: Validate no personal paths
         run: node scripts/ci/validate-no-personal-paths.js
+
+      - name: Validate OpenSpec syntax
+        run: node scripts/ci/validate-openspec-syntax.js
+
+      - name: Check spec freshness
+        run: ECC_SPEC_STALE_WARN_ONLY=true node scripts/ci/check-spec-freshness.js
