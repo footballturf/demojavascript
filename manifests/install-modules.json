@@ -63,6 +63,7 @@
       "paths": [
         "commands",
         "scripts/harness-audit.js",
+        "scripts/plugin-profiles.js",
         "scripts/skills-health.js"
       ],
       "targets": [
