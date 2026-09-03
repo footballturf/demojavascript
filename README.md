@@ -68,7 +68,7 @@
 
 ## Install with Claude Code
 
-Run the canonical guided setup from your terminal:
+Run the canonical guided setup from your terminal:s
 
 ```bash
 npx ecc-universal setup
