@@ -24,8 +24,14 @@ const { spawnSync } = require('child_process');
 
 const repoRoot = path.join(__dirname, '..', '..');
 const runner = path.join(repoRoot, 'scripts', 'hooks', 'run-with-flags.js');
+const hooksConfig = JSON.parse(
+  fs.readFileSync(path.join(repoRoot, 'hooks', 'hooks.json'), 'utf8')
+);
 
 const MAX_STDIN = 1024 * 1024;
+const SUBPROCESS_TIMEOUT_MS = process.platform === 'darwin' && process.env.CI === 'true'
+  ? 120_000
+  : 60_000;
 
 const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-stop-stdout-')); // non-git cwd
 const dataHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-stop-data-'));
@@ -42,14 +48,14 @@ function test(name, fn) {
   }
 }
 
-function stopPayload(messageBytes) {
+function stopPayload(messageCharacters, character = 'm') {
   return JSON.stringify({
     session_id: `stop-stdout-test-${process.pid}`,
     transcript_path: path.join(workDir, 'missing-transcript.jsonl'),
     cwd: workDir,
     hook_event_name: 'Stop',
     stop_hook_active: false,
-    last_assistant_message: 'm'.repeat(messageBytes)
+    last_assistant_message: character.repeat(messageCharacters)
   });
 }
 
@@ -62,6 +68,7 @@ function hookEnv() {
   };
   delete env.ECC_GATEGUARD;
   delete env.ECC_DISABLED_HOOKS;
+  delete env.ECC_DRY_RUN;
   return env;
 }
 
@@ -71,7 +78,7 @@ function runViaRunner(hookId, script, input) {
     encoding: 'utf8',
     cwd: workDir,
     env: hookEnv(),
-    timeout: 60000,
+    timeout: SUBPROCESS_TIMEOUT_MS,
     maxBuffer: 16 * 1024 * 1024,
     stdio: ['pipe', 'pipe', 'pipe']
   });
@@ -83,7 +90,27 @@ function runDirect(script, input) {
     encoding: 'utf8',
     cwd: workDir,
     env: hookEnv(),
-    timeout: 60000,
+    timeout: SUBPROCESS_TIMEOUT_MS,
+    maxBuffer: 16 * 1024 * 1024,
+    stdio: ['pipe', 'pipe', 'pipe']
+  });
+}
+
+function runRegisteredStopHook(entry, input, envOverrides = {}) {
+  const env = {
+    ...hookEnv(),
+    CLAUDE_PLUGIN_ROOT: repoRoot,
+    ECC_DISABLED_HOOKS: entry.id,
+    ...envOverrides
+  };
+
+  return spawnSync(entry.hooks[0].command, {
+    input,
+    encoding: 'utf8',
+    cwd: workDir,
+    env,
+    shell: true,
+    timeout: SUBPROCESS_TIMEOUT_MS,
     maxBuffer: 16 * 1024 * 1024,
     stdio: ['pipe', 'pipe', 'pipe']
   });
@@ -130,6 +157,94 @@ let failed = 0;
 // runner path, making the harness report "JSON validation failed".
 const realisticPayload = stopPayload(100 * 1024);
 
+// Exercise the command users actually run from hooks.json. The runner already
+// flushes large stdout before exiting, but the outer lifecycle wrapper used to
+// call process.exit() immediately after forwarding it, cutting the JSON at the
+// OS pipe buffer and reintroducing #2222 above the tested runner layer.
+for (const entry of hooksConfig.hooks.Stop) {
+  if (
+    test(`${entry.id} registered wrapper flushes a 100KB Stop payload`, () => {
+      const result = runRegisteredStopHook(entry, realisticPayload);
+      assert.strictEqual(
+        result.status,
+        0,
+        `${entry.id}: expected exit 0, got ${result.status}: ${result.stderr}`
+      );
+      assert.ok(
+        result.stdout === realisticPayload,
+        `${entry.id}: registered wrapper must echo ${realisticPayload.length} characters uncut (got ${result.stdout.length})`
+      );
+      JSON.parse(result.stdout);
+    })
+  )
+    passed++;
+  else failed++;
+}
+
+const representativeStopEntry = hooksConfig.hooks.Stop.find(
+  entry => entry.id === 'stop:cost-tracker'
+);
+const CALLBACK_FLUSH_WRAPPER = 'const finish=(out,err,code)=>{let pending=1;const done=()=>{pending-=1;if(pending===0)process.exit(code);};if(out){pending+=1;process.stdout.write(out,done);}if(err){pending+=1;process.stderr.write(err,done);}process.nextTick(done);};';
+
+if (
+  test('all registered Stop wrappers keep the large-output flush contract', () => {
+    for (const entry of hooksConfig.hooks.Stop) {
+      assert.match(entry.hooks[0].command, /maxBuffer:16\*1024\*1024/);
+      assert.ok(
+        entry.hooks[0].command.includes(CALLBACK_FLUSH_WRAPPER),
+        `${entry.id}: wrapper must wait for stdout and stderr callbacks before exiting`
+      );
+    }
+  })
+)
+  passed++;
+else failed++;
+
+if (
+  test('registered Stop wrapper flushes a 100KB dry-run payload', () => {
+    const result = runRegisteredStopHook(representativeStopEntry, realisticPayload, {
+      ECC_DISABLED_HOOKS: '',
+      ECC_DRY_RUN: '1'
+    });
+    assert.strictEqual(result.status, 0, `expected exit 0, got ${result.status}: ${result.stderr}`);
+    assert.ok(
+      result.stdout === realisticPayload,
+      `dry-run wrapper must echo ${realisticPayload.length} characters uncut (got ${result.stdout.length})`
+    );
+    JSON.parse(result.stdout);
+  })
+)
+  passed++;
+else failed++;
+
+// spawnSync limits captured output by bytes while the runner's stdin cap is
+// counted after UTF-8 decoding. A payload can therefore be below MAX_STDIN in
+// characters but above Node's default 1MB child-process buffer in bytes.
+const multibytePayload = stopPayload(400 * 1024, '한');
+assert.ok(multibytePayload.length < MAX_STDIN, 'fixture must stay below the runner character cap');
+assert.ok(Buffer.byteLength(multibytePayload) > MAX_STDIN, 'fixture must exceed the default byte buffer');
+
+// Every registered command uses the same generated wrapper, verified above.
+// Exercise the multi-megabyte byte-buffer edge once so the test does not
+// amplify hosted-runner load by serializing the identical payload seven times.
+if (
+  test('registered Stop wrapper preserves a multibyte sub-cap payload', () => {
+    const result = runRegisteredStopHook(representativeStopEntry, multibytePayload);
+    assert.strictEqual(
+      result.status,
+      0,
+      `expected exit 0, got ${result.status}: ${result.stderr}`
+    );
+    assert.ok(
+      result.stdout === multibytePayload,
+      `registered wrapper must echo ${Buffer.byteLength(multibytePayload)} bytes uncut (got ${Buffer.byteLength(result.stdout)})`
+    );
+    JSON.parse(result.stdout);
+  })
+)
+  passed++;
+else failed++;
+
 for (const [hookId, script] of STOP_HOOKS) {
   if (
     test(`${hookId} via runner keeps stdout valid for a 100KB Stop payload`, () => {
@@ -145,6 +260,37 @@ for (const [hookId, script] of STOP_HOOKS) {
 }
 
 const oversizedPayload = stopPayload(MAX_STDIN + 64 * 1024);
+
+if (
+  test('registered Stop wrapper suppresses a >1MB dry-run payload', () => {
+    const result = runRegisteredStopHook(representativeStopEntry, oversizedPayload, {
+      ECC_DISABLED_HOOKS: '',
+      ECC_DRY_RUN: '1'
+    });
+    assert.strictEqual(result.status, 0, `expected exit 0, got ${result.status}: ${result.stderr}`);
+    assert.strictEqual(
+      result.stdout.length,
+      0,
+      `dry-run wrapper must preserve oversized-input suppression (got ${result.stdout.length} characters)`
+    );
+  })
+)
+  passed++;
+else failed++;
+
+if (
+  test('registered Stop wrapper suppresses a >1MB Stop payload', () => {
+    const result = runRegisteredStopHook(representativeStopEntry, oversizedPayload);
+    assert.strictEqual(result.status, 0, `expected exit 0, got ${result.status}: ${result.stderr}`);
+    assert.strictEqual(
+      result.stdout.length,
+      0,
+      `wrapper must preserve oversized-input suppression (got ${result.stdout.length} characters)`
+    );
+  })
+)
+  passed++;
+else failed++;
 
 for (const [hookId, script] of [...STOP_HOOKS, ['stop:desktop-notify', 'scripts/hooks/desktop-notify.js']]) {
   if (
