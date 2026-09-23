@@ -1,4 +1,4 @@
-<p align="center">
+<p align="center"> 
   
   <img src="assets/hero.png" alt="ECC - the agent harness operating system" width="100%" />
 </p>
