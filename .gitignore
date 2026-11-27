@@ -107,3 +107,9 @@ ecc2/target/
 assets/images/security/badrudi-exploit.mp4
 
 .aider*
+
+# Kimi install artifacts — the repo's .kimi/ holds compat docs only;
+# managed Kimi installs target .kimi-code/ in destination projects.
+# A stale self-install once mirrored the bundle here; keep it out.
+.kimi/*
+!.kimi/README.md

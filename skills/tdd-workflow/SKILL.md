@@ -38,6 +38,8 @@ Plan safety checklist before continuing:
 
 Do not treat the plan as permission to skip TDD. The plan supplies intent and task structure; the RED/GREEN cycle supplies proof.
 
+For multi-file plans, run a `roast-me` pass before Step 1: every planned component answers "why does this exist," FATAL findings block implementation, and alternatives are capped at three. This is where scope creep dies, not in review.
+
 ## Core Principles
 
 ### 1. Tests BEFORE Code
@@ -48,6 +50,8 @@ ALWAYS write tests first, then implement code to make tests pass.
 - All edge cases covered
 - Error scenarios tested
 - Boundary conditions verified
+
+Coverage is a floor, not a goal. Per `anti-slop`: every test names the real failure it catches; a test that cannot fail for a reason a user would care about gets deleted, and tests obsoleted by a change are removed in the same PR. Redundant coverage buries signal and is treated as a defect, not diligence.
 
 ### 3. Test Types
 

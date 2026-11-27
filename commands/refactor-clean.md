@@ -58,6 +58,8 @@ After removing dead code, look for:
 - Near-duplicate functions (>80% similar) — merge into one
 - Redundant type definitions — consolidate
 - Wrapper functions that add no value — inline them
+- Parallel systems doing one job — per `anti-slop`, one canonical implementation: merge or delete, never leave both
+- Tests obsoleted by the deletions — remove them in this same pass; a test asserting deleted behavior through a mock is dead code too
 - Re-exports that serve no purpose — remove indirection
 
 ## Step 6: Summary

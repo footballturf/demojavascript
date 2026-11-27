@@ -29,10 +29,15 @@ engine in [`orch-pipeline`](../orch-pipeline/SKILL.md).
 ## How It Works
 
 1. Run the `orch-pipeline` engine with the settings above.
-2. For dead-code / duplication sweeps, delegate to the `refactor-cleaner` agent
-   (it runs knip / depcheck / ts-prune and removes safely).
-3. Stop at **Gate 1** (restructure plan) and **Gate 2** (pre-commit).
-4. Commit as `refactor:` — the diff must be behavior-neutral.
+2. Before Gate 1, run a [`roast-me`](../roast-me/SKILL.md) pass on the
+   restructure plan: every surviving component answers "why does this exist";
+   FATAL findings block the plan.
+3. For dead-code / duplication sweeps, delegate to the `refactor-cleaner` agent
+   (it runs knip / depcheck / ts-prune and removes safely), applying the
+   [`anti-slop`](../anti-slop/SKILL.md) rules: zero-caller exports die, one
+   canonical implementation, tests deleted in the same PR that obsoletes them.
+4. Stop at **Gate 1** (restructure plan) and **Gate 2** (pre-commit).
+5. Commit as `refactor:` — the diff must be behavior-neutral.
 
 ## Example
 
